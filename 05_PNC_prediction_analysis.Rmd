@@ -1,0 +1,287 @@
+---
+title: "PNC alpraz model predictions analysis"
+author: "Bart"
+date: "2/2/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(sjPlot)
+library(mgcv)
+library(broom)
+library(purrr)
+require(ggplot2)
+library(cowplot)
+require(dplyr)
+knitr::opts_chunk$set(fig.height = 6,fig.width = 6,echo = F,warning = FALSE)
+setwd("/cbica/projects/alpraz_EI/SubmissionGithub/")
+source("Alpraz_viz_functions.R")
+font_size <- 16
+unimodal_color = "#1c405eff"
+transmodal_color = "#285c27ff"
+theme_set(theme_classic(base_family = "sans",base_size = font_size))
+theme_replace(axis.text=element_text(colour = "black",size = font_size))
+
+# Load all the data
+PNCData <- read.csv('/cbica/projects/alpraz_EI/input/PNC_sublist_FD.csv')
+demo<-read.csv('/cbica/projects/alpraz_EI/input/n9498_demographics_go1_20161212.csv')
+idemoQA <- read.csv('/cbica/projects/alpraz_EI/input/n1601_idemo_FinalQA_092817.csv')
+idemoBehavior <- read.csv('/cbica/projects/alpraz_EI/input/n1601_idemoBehavior_20151130.csv')
+health <- read.csv('/cbica/projects/alpraz_EI/input/n1601_health_with_meds_20170421.csv')
+
+alpraz_info = read.csv('/cbica/projects/alpraz_EI/input/alpraz_sublist_FD2.csv')
+alpraz_demo = read.csv('/cbica/projects/alpraz_EI/input/Alpraz_demographics.csv')
+alpraz_info <- alpraz_info %>% left_join(alpraz_demo,by=c("subid"="bblid", "sesid"="fmriid"))
+# Sample characteristics
+alpraz_sample <- alpraz_info%>%
+  filter(!is.na(subid))
+print(alpraz_sample %>% 
+  select(subid,age.at.fmri1,sex_M0F1,motion_pass,exists) %>%
+  filter(exists==1 & motion_pass==1) %>%
+  unique()%>%
+  summarize(n=n(),
+            min_age = min(age.at.fmri1,na.rm=T),
+            max_age = max(age.at.fmri1,na.rm=T),
+            mean_age = mean(age.at.fmri1,na.rm=T),
+            sd_age=sd(age.at.fmri1),
+            males = sum(sex_M0F1==1),
+            females = sum(sex_M0F1==0)))
+
+# Get exclusions due to poor data quality and health data (low threshhold normal used here)
+FD_thresh <- .3 #threshold for mean FD
+PNCData <- PNCData %>%
+  left_join(demo,by = c("subid"="bblid"))%>%
+  left_join(idemoBehavior,by=c("subid"="bblid"))%>%
+  left_join(idemoQA,by = c("subid"="bblid"))%>%
+  left_join(health, by = c("subid"="bblid"))%>%
+  mutate(FD_exclude = FD>FD_thresh)
+PNCData$exclusions <-  PNCData$ltnExcludev2==1 | 
+  PNCData$FD_exclude==1 |
+  is.na(PNCData$idemoBehAllEmoNrCount)|
+  PNCData$idemoExcludeVoxelwise==1
+
+print(PNCData %>% 
+  select(subid,ageAtCnb1,sex,exclusions) %>%
+  filter(exclusions==0) %>%
+  summarize(n=n(),
+            min_age = min(ageAtCnb1/12,na.rm=T),
+            max_age = max(ageAtCnb1/12,na.rm=T),
+            mean_age = mean(ageAtCnb1/12,na.rm=T),
+            sd_age=sd(ageAtCnb1/12),
+            males = sum(sex==1),
+            females = sum(sex==2)))
+
+
+```
+
+```{r functions,echo=FALSE}
+# A number of functions that are used.
+
+# This one just merges data.frames and deals with variable types, etc.
+data_mgmt <- function(fname){
+  pred_results <- readRDS(fname)%>%
+    left_join(PNCData,by = "subid")
+  pred_results$oPred <- ordered(pred_results$pred,levels=c(1,0),labels=c("Placebo","Drug")) #1 is placebo, 0 is drug.
+  pred_results<-pred_results%>%
+    mutate(age = ageAtCnb1/12,age2=age^2,
+           oSex = ordered(sex,levels=c(1,2),labels=c("male","female")),
+           oRace = ordered(race2),
+           fRace = factor(race2),
+           weights = 1/FD,
+           distance = as.numeric(distance),
+           nPred = as.numeric(pred==0)) #Note Drug is now 1 and placebo is now 0 (for ease of visualization)
+  return(pred_results)
+}
+
+# This runs models and plots the outputs.
+plot_results <- function(pred_results,title_text,plot_color="black"){
+  
+  # Fit distance from the classification hyperplane, a continuous measure, as a function of age and covariates using GAM.
+  cat("\nDevelopmental models for  distance\n")
+  pred_results$Distance = as.numeric(pred_results$distance)
+
+  # GAM
+  cat("\nGAM\n")
+  gam_model <- gam(Distance ~s(age,k=4)+ oSex+FD+ idemoBehAllEmoNrCount, data = pred_results,
+                 subset = exclusions==0)
+  print(summary(gam_model))
+  tab_model(gam_model)
+  
+  DistGAM <- visualize_model(gam_model,smooth_var = "age",int_var = NULL,group_var = NULL,derivative_plot = TRUE,line_color=plot_color)
+  ggsave(sprintf('figs/%s_distance_gam.svg',title_text),DistGAM,device = 'svg',height = 5,width = 5)
+}
+```
+
+## Schaefer 400
+Results when using all the schaefer 400 regions.  
+
+```{r 400, warning=FALSE}
+pred_results <- data_mgmt('/cbica/projects/alpraz_EI/output/PNC_predictions/schaefer400x7_aal_all_FD5.rds')
+display_results("schaefer400x7_aal",perm_results = T)
+plot_results(pred_results,"Schaefer400_All_Regions")
+```
+
+## Transmodality 
+Looking at the classification models trained on connections to the most transmodal or unimodal regions only.  
+
+### Transmodal
+
+```{r transmodal}
+pred_results <- data_mgmt('/cbica/projects/alpraz_EI/output/PNC_predictions/schaefer400x7_aal_transmodal25_FD5.rds')
+alpraz_results <- readRDS("/cbica/projects/alpraz_EI/output/drug_classification/schaefer400x7_aal_GSR_transmodal25_svm_1_permute_on_FD5results.rds")
+display_results(atlasname = "schaefer400x7_aal",perm_results = TRUE,results = alpraz_results,subdivision = "transmodal25")
+b <- alpraz_results[[1]]
+cat("Results for classification:\n")
+cat(sprintf("\n Number of features: %d\n",alpraz_results[[3]]))
+cat("\nAccuracy:\n")
+print(b$accuracy)
+cat(sprintf("p = %1.3f\n",b$p.value))
+
+pred_a_400 = pred_results
+plot_results(pred_a_400,"Schaefer400_Transmodality",plot_color = transmodal_color)
+
+```
+
+### Unimodal
+
+```{r unimodal}
+pred_results <- data_mgmt('/cbica/projects/alpraz_EI/output/PNC_predictions/schaefer400x7_aal_unimodal25_FD5.rds')
+alpraz_results <- readRDS("/cbica/projects/alpraz_EI/output/drug_classification/schaefer400x7_aal_GSR_unimodal25_svm_1_permute_on_FD5results.rds")
+display_results(atlasname = "schaefer400x7_aal",perm_results = T,results = alpraz_results,subdivision="unimodal25")
+b <- alpraz_results[[1]]
+cat("Results for classification:\n")
+cat(sprintf("\n Number of features: %d\n",alpraz_results[[3]]))
+cat("\nAccuracy:\n")
+print(b$accuracy)
+cat(sprintf("p = %1.3f\n",b$p.value))
+
+pred_s_400 = pred_results
+plot_results(pred_s_400,"Schaefer400_Unimodal",plot_color = unimodal_color)
+
+```
+
+### Transmodal vs. unimodal development    
+
+Looking at the difference in the distance metric between the transmodal and the unimodal classification models. We want to test the hypothesis that transmodal areas are undergoing the most pronounced E:I development in this age range. So, we test whether the w/in subject difference in transmodal and unimodal distances increases with age.    
+
+```{r sens_assoc diff,fig.height=8,fig.width=8}
+
+pred_a_400 <- pred_a_400 %>%
+  mutate(a_distance=distance,
+         a_nPred = nPred,
+         transmodal_classifier = a_distance)
+
+pred_s_400 <- pred_s_400 %>%
+  mutate(s_distance=distance,
+         s_nPred = nPred,
+         unimodal_classifier = s_distance)
+pred_join_400 <- pred_a_400 %>%
+  left_join(pred_s_400,by=c("subid","age","FD","oSex","idemoBehAllEmoNrCount"))%>%
+  pivot_longer(cols = c(transmodal_classifier,unimodal_classifier),names_to = "subdivision",values_to = "Distance")
+difference_df <- pred_a_400 %>%
+  left_join(pred_s_400,by=c("subid","age","FD","oSex","idemoBehAllEmoNrCount","exclusions"))%>%
+  filter(exclusions==0)
+
+# Calculate residualized change in distance between the transmodal and unimodal models
+res_mod <- mgcv::gam(a_distance ~ s(s_distance),data = difference_df)
+difference_df$res_change <- residuals(res_mod)
+
+# Fit the residualized change as a function of age (with covariates)
+gmod_diff <-mgcv::gam(res_change ~ oSex+FD+idemoBehAllEmoNrCount+ s(age,k=4),
+                  data = difference_df)
+summary(gmod_diff)
+res_change_plot <- visualize_model(modobj = gmod_diff,smooth_var = "age",int_var = NULL,group_var = NULL,derivative_plot = F)
+ggsave("figs/res_change_plot.svg",res_change_plot,device = "svg", height = 5,width = 5,units = "in")
+
+
+```
+
+## Clinical effects
+
+Now we test whether the development of E:I balance is moderated by dimensions of psychopathology. Specifically, we extracting the clinical factor scores from the GOASSESS data and looking for age-by-factor-score interactions.  As psychopathology emerges during adolescence, the hypothesis is that greater symptom load will be impact developmental trajectories of E:I.  
+
+```{r clinical, eval=TRUE,include=TRUE,fig.height=2,fig.width=3}
+clinical <- read.csv('/cbica/projects/alpraz_EI/input/n1601_goassess_itemwise_bifactor_scores_20161219.csv')
+clinical$subid=clinical$bblid
+
+pred_results <- pred_a_400
+pred_clinical <- pred_results %>%
+  left_join(clinical,by = "subid")%>%
+  mutate(distance = as.numeric(distance),abs_distance = abs(distance))
+
+pred_clinical$exclusions <-  pred_clinical$healthExcludev2==1 | 
+  pred_clinical$FD_exclude==1 |
+  pred_clinical$idemoExcludeVoxelwise==1 
+
+print(pred_clinical %>% 
+  select(subid,age,sex,exclusions) %>%
+  filter(exclusions==0) %>%
+  summarize(n=n(),
+            min_age = min(age,na.rm=T),
+            max_age = max(age,na.rm=T),
+            mean_age = mean(age,na.rm=T),
+            sd_age=sd(age),
+            males = sum(sex==1),
+            females = sum(sex==2)))
+
+# All dimensions
+gam_model <- gam(distance ~ s(age,k=4)+ oSex+FD + idemoBehAllEmoNrCount + s(overall_psychopathology_4factorv2,k=4) + s(psychosis_4factorv2,k=4) + s(mood_4factorv2,k=4) + s(externalizing_4factorv2,k=4) + s(phobias_4factorv2,k=4),data = pred_clinical,subset = exclusions==0)
+summary(gam_model)
+visualize_model(gam_model,smooth_var = "mood_4factorv2",int_var = NULL,group_var = NULL)
+
+gam_model <- gam(distance ~ ti(age,k=4)+ oSex+FD + idemoBehAllEmoNrCount + 
+               ti(overall_psychopathology_4factorv2,k=4) + 
+               ti(psychosis_4factorv2,k=4) + 
+               ti(mood_4factorv2,k=4) + 
+               ti(externalizing_4factorv2,k=4) + 
+               ti(phobias_4factorv2,k=4) +
+               ti(age,overall_psychopathology_4factorv2,k=4)+ 
+               ti(age,psychosis_4factorv2,k=4)+
+               ti(age,phobias_4factorv2,k=4)+
+               ti(age,externalizing_4factorv2,k=4)+
+               ti(age,mood_4factorv2,k=4),
+             data = pred_clinical,subset = exclusions==0)
+summary(gam_model)
+visualize_model(gam_model,smooth_var = "age",int_var =  "mood_4factorv2",group_var = NULL)
+
+```
+
+
+## Generalizability analyses: Other atlases
+Confirming that the classification results and age effects generalize across other atlas parcellations.  
+
+## Schaefer 200
+
+```{r s200, eval = FALSE}
+pred_results <- data_mgmt('/cbica/projects/alpraz_EI/output/PNC_predictions/schaefer200x7_aal_all_FD5.rds')
+display_results("schaefer200x7_aal",perm_results = T)
+plot_results(pred_results,"Schaefer200_All_Regions")
+```
+
+### AAL
+
+```{r aal,eval=FALSE}
+pred_results <- data_mgmt('/cbica/projects/alpraz_EI/output/PNC_predictions/aal116_all_FD5.rds')
+display_results("aal116",perm_results = T)
+plot_results(pred_results,"AAL: All Regions")
+
+```
+
+
+### Glasser
+
+```{r Glasser,eval=FALSE}
+pred_results <- data_mgmt('/cbica/projects/alpraz_EI/output/PNC_predictions/glasser360_aal_all_FD5.rds')
+display_results("glasser360_aal",perm_results = T)
+plot_results(pred_results,"Glasser: All Regions")
+
+```
+
+### Gordon
+```{r Gordon,eval=FALSE}
+pred_results <- data_mgmt('/cbica/projects/alpraz_EI/output/PNC_predictions/gordon333_aal_all_FD5.rds')
+display_results("gordon333_aal",perm_results = T)
+plot_results(pred_results,"Gordon: All Regions")
+
+```
