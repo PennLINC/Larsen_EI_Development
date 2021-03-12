@@ -42,5 +42,8 @@ There is functionality to run permutation tests for each of these.
 - It relies on the script `Alpraz_viz_functions.R` to make most of the figures/visualizations. 
   - That script contains all of the functions to visualize classifier results.
 - It also fits the GAM models for the age effects. 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 0d74bc9df94880e3419a6f5852771e68e920cdd3
 
