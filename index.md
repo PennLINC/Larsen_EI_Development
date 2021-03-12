@@ -9,14 +9,12 @@ The goal of this project is to measure the development of the E:I ratio using fM
 05: This evaluates the the results of the PNC model-generated labels and classification distances. It assesses age relationships as well as clinical relationships.  
 
 
-## Notes on the steps for replication 
-All the scripts should be run from CUBIC. The directory there are stored in is `/cbica/projects/alpraz_EI/scripts`.  
-Many of the scripts pull input data from `/cbica/projects/alpraz_EI/input` or from `/cbica/projects/alpraz_EI/data`.  
+## Notes on the scripts:  
 The scripts are numbered according to the order they should run.  
 
 1. This step downloads preprocessed data from flywheel.  
 
-2. This script launches `qsub` jobs that generate connectivity matrices for all the pharmacological sessions and for all the atlases. 
+2. This script is designed to run on a SGE cluster. It launches `qsub` jobs that generate connectivity matrices for all the pharmacological sessions and for all the atlases. 
 The script uses AFNI's `3dNetCorr` function. For convenience reasons with qsub, the actual call to `3dNetCorr` is in the script `netcor_call.sh`.  
 For replication, you can probably just generate a matrix for one or two subjects using the schaefer400 atlas. For example, you could run the following:  
 
