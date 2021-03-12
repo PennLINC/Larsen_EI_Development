@@ -2,7 +2,7 @@
 
 ## File overview
 01: This downloads the output of all the flywheel processing (including fmriprep and XCP processing). Those scripts can be found in xcp_fw directory.  
-02: This generates connectivity matrices for all the existing parcellations we have. (Atlases were generated with `createCoverageAtlash.sh`).  
+02: This generates connectivity matrices for all the existing parcellations we have.   
 03: These do the same as the above scripts but for all the PNC data.  
 04: This does the trains the classifier models and then applies them to the PNC data.  
 05: This evaluates the the results of the PNC model-generated labels and classification distances. It assesses age relationships as well as clinical relationships.  
