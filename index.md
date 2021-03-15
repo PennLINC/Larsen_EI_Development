@@ -23,20 +23,15 @@ For replication, you can probably just generate a matrix for one or two subjects
 4. This script does the SVM classification. My final analyses use 3 different classification models:  
 - a classifier with all regions. 
 - a classifier with transmodal areas only. 
-- a classifier with unimodal areas only   
-
+- a classifier with unimodal areas only.   
 This should be run 3 times with different options each time.  
 First, set `subdivide = FALSE` and `subdivision = "all"`.  
 Second, set `subdivide = TRUE` and `subdivision = "transmodal25"`.  
 Last, set `subdivide = TRUE` and `subdivision = "unimodal25"`.    
 More information about this is included in the script comments.  
 
-There is functionality to run permutation tests for each of these.  
-`perm_test="permute_off"` for no permutations.   
 
-`perm_test="permute_on"` for permutations.  
-
-5. Finally, this Rmd script takes the output from step `4` and does some analyses.  
+5. Finally, this Rmd script analyzes the output from step `4` and generates figures.  
 - It relies on the script `Alpraz_viz_functions.R` to make most of the figures/visualizations. 
   - That script contains all of the functions to visualize classifier results.
 - It also fits the GAM models for the age effects. 
