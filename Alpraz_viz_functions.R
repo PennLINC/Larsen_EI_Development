@@ -1,18 +1,10 @@
 # Varius functions that organize and plot data from the study.
-# library(tidyverse)
-# library(oro.nifti)
 library(neurobase)
 library(cowplot)
 library(ggridges)
 library(pracma)
-# library(purrr)
-# library(mgcv)
 library(gratia)
-# library(broom)
 library(scales)
-# library(kableExtra)
-# library(RColorBrewer)
-setwd("/cbica/projects/alpraz_EI/SubmissionGithub/")
 source('tools/RainCloudPlots/tutorial_R/R_rainclouds.R')
 font_size <- 16
 unimodal_color = "#1c405eff"
@@ -24,7 +16,7 @@ point_size <- 2
 
 feat2mat <- function(W,atlasname,community_summary = F,plots = T,templateCC = NULL,returnRankingsOnly = F,GABA=T,transmodality=T,surface=F){
   if (is.null(templateCC)) {
-    fname <- sprintf("/cbica/projects/alpraz_EI/data/TASK_GSR/13783/1986/%s_CC_GSR_000.netcc",atlasname)
+    fname <- sprintf("input/template_CMats/%s_CC_GSR_000.netcc",atlasname)
     templateCC <- as.matrix(read.table(fname,header = T,skip = 4))
   }
   
@@ -43,7 +35,7 @@ feat2mat <- function(W,atlasname,community_summary = F,plots = T,templateCC = NU
   
   # Get labels
   
-  labels <- read.csv(sprintf('/cbica/projects/alpraz_EI/input/atlases/%s_labels.csv',atlasname),header=F)
+  labels <- read.csv(sprintf('input/atlases/%s_labels.csv',atlasname),header=F)
   mat_labels <- data.frame(nums = colnames(templateCC))
   mat_labels$nums <- as.numeric(gsub(mat_labels$nums,pattern="X",replace=""))
   mat_labels <- mat_labels %>% left_join(labels,by = c("nums"="V1"))
@@ -65,7 +57,7 @@ feat2mat <- function(W,atlasname,community_summary = F,plots = T,templateCC = NU
     corr_vec <- vector(mode="double",length = 6)
     for (n in c(1,2,3,4,5,6)) {
       GABA_vals <- read.table(sprintf(
-        '/cbica/projects/alpraz_EI/input/atlases/GABRA%d/GABRA%d_%s_threshold_0.95_vals.csv',n,n,atlasname),
+        'input/atlases/GABRA%d/GABRA%d_%s_threshold_0.95_vals.csv',n,n,atlasname),
         header = T)
       
       GABA_mat_labels <- rval_df %>% left_join(GABA_vals,by = c("nums"="label"))
@@ -119,7 +111,7 @@ feat2mat <- function(W,atlasname,community_summary = F,plots = T,templateCC = NU
   }
 
   if (transmodality == T){
-    trans_labels <- read.csv('/cbica/projects/alpraz_EI/input/atlases/Schaef400_transmodality7.csv',header = F)
+    trans_labels <- read.csv('input/atlases/Schaef400_transmodality7.csv',header = F)
     
     colnames(trans_labels) <- c('name','transmodality')
     trans_labels$name <- gsub(trans_labels$name,pattern = "7Networks_",replacement = "")
@@ -175,16 +167,16 @@ feat2mat <- function(W,atlasname,community_summary = F,plots = T,templateCC = NU
 mat2brain <- function(CC,atlasname,filename){
   
   #load atlas
-  fname <- sprintf("/cbica/projects/alpraz_EI/input/atlases/%s_threshold_0.95.nii.gz",atlasname)
+  fname <- sprintf("input/atlases/%s_threshold_0.95.nii.gz",atlasname)
   atlas <- readnii(fname)
   atlas_vec <- c(atlas)
   
   # Get labels
-  fname <- sprintf("/cbica/projects/alpraz_EI/data/TASK_GSR/13783/1986/%s_CC_GSR_000.netcc",atlasname)
+  fname <- sprintf("input/template_CMats/%s_CC_GSR_000.netcc",atlasname)
   template_CC <- as.matrix(read.table(fname,header = T,skip = 4))
-  labels <- read.csv(sprintf('/cbica/projects/alpraz_EI/input/atlases/%s_labels.csv',atlasname),header=F)
+  labels <- read.csv(sprintf('input/atlases/%s_labels.csv',atlasname),header=F)
   if (atlasname %in% c("schaefer200x7_aal","schaefer400x7_aal","gordon333_aal")) {
-    community_labels <- read.csv(sprintf('/cbica/projects/alpraz_EI/input/atlases/%s_node_labels.csv',
+    community_labels <- read.csv(sprintf('input/atlases/%s_node_labels.csv',
                                          gsub(x = atlasname,pattern = "_aal",replacement = ""))
                                  ,header=T)
     
@@ -213,8 +205,8 @@ mat2brain <- function(CC,atlasname,filename){
     label_vec <- as.matrix(voxel_df$vals)
     label_matrix <- array(label_vec, dim = dim(atlas))
     nifti_image <- niftiarr(atlas,label_matrix)
-    cat(sprintf("\n Writing /cbica/projects/alpraz_EI/output/drug_classification/%s.nii.gz ......\n",filename))
-    writenii(nifti_image,filename = sprintf("/cbica/projects/alpraz_EI/output/drug_classification/%s.nii.gz",filename))
+    cat(sprintf("\n Writing output/drug_classification/%s.nii.gz ......\n",filename))
+    writenii(nifti_image,filename = sprintf("output/drug_classification/%s.nii.gz",filename))
     cat("done\n")
     
   } else {
@@ -229,13 +221,13 @@ mat2brain <- function(CC,atlasname,filename){
 
 write_brainsmash_files <- function(df,distance_matrix,idx,fname,var_names,atlasname){
   this_distance_matrix <- distance_matrix[idx,idx]
-  write.table(this_distance_matrix,file = sprintf("/cbica/projects/alpraz_EI/output/brainsmash/input_files/%s_threshold_0.95_%s_distMat.csv",atlasname,fname),
+  write.table(this_distance_matrix,file = sprintf("output/brainsmash/input_files/%s_threshold_0.95_%s_distMat.csv",atlasname,fname),
               sep = ",",row.names = F,col.names = F)
   brain_map1 <- df[idx,var_names[1]]
-  write.table(brain_map1,file = sprintf("/cbica/projects/alpraz_EI/output/brainsmash/input_files/%s_threshold_0.95_%s_%s.csv",atlasname,fname,var_names[1]),
+  write.table(brain_map1,file = sprintf("output/brainsmash/input_files/%s_threshold_0.95_%s_%s.csv",atlasname,fname,var_names[1]),
               sep = ",",row.names = F,col.names = F)
   brain_map2 <- df[idx,var_names[2]]
-  write.table(brain_map2,file = sprintf("/cbica/projects/alpraz_EI/output/brainsmash/input_files/%s_threshold_0.95_%s_%s.csv",atlasname,fname,var_names[2]),
+  write.table(brain_map2,file = sprintf("output/brainsmash/input_files/%s_threshold_0.95_%s_%s.csv",atlasname,fname,var_names[2]),
               sep = ",",row.names = F,col.names = F)
   
 }
@@ -342,10 +334,10 @@ display_results <- function(atlasname,GSR="GSR",classifier="svm",perm_results=F,
       results <- readRDS(result_fname)
     } else {
       if (perm_results == T){
-        results <- readRDS(sprintf("/cbica/projects/alpraz_EI/output/drug_classification/%s_%s_all_%s_1_permute_on_FD5results.rds",
+        results <- readRDS(sprintf("output/drug_classification/%s_%s_all_%s_1_permute_on_results.rds",
                                    atlasname,GSR,classifier))
       }else {
-        results <- readRDS(sprintf("/cbica/projects/alpraz_EI/output/drug_classification/%s_%s_all_%s_1_permute_off_FD5results.rds",
+        results <- readRDS(sprintf("output/drug_classification/%s_%s_all_%s_1_permute_off_results.rds",
                                    atlasname,GSR,classifier))
       }
     }
@@ -366,7 +358,7 @@ display_results <- function(atlasname,GSR="GSR",classifier="svm",perm_results=F,
   AUC <- AUC_obj$auc
   roc_plot <- AUC_obj$roc_plot
   ggsave(file=sprintf('figs/ROC_plot_%s.svg',subdivision),plot=roc_plot,device='svg',height=4,width=4.5,units = "in")
-  cat(sprintf("\nAUC = %1.3f\n",AUC))
+  cat(sprintf("\nAUC = %1.4f\n",AUC))
   
   # Look at W coefs
   W <- results[[2]]
@@ -462,11 +454,10 @@ visualize_model <- function(modobj,smooth_var, int_var = NULL ,group_var = NULL,
     stop("Can't find a gam object to plot")
   }
   s<-summary(model)
-  
+  df <- model$model
   ## Generate custom line plot
   np <- 10000 #number of predicted values
-  df = model$model
-  
+
   theseVars <- attr(model$terms,"term.labels")
   varClasses <- attr(model$terms,"dataClasses")
   thisResp <- as.character(model$terms[[2]])
@@ -567,8 +558,8 @@ visualize_model <- function(modobj,smooth_var, int_var = NULL ,group_var = NULL,
       if (show.data==TRUE) {
         print('show data is on')
         p1<- p1 +  
-          geom_point(alpha = .35,stroke = 0, size = point_size,show.legend = FALSE)
-          # geom_hex(color=NULL) 
+          # geom_point(alpha = .35,stroke = 0, size = point_size,show.legend = FALSE)
+          geom_hex(color=NULL)
       } 
       
       if (!is.null(group_var)) {
@@ -609,20 +600,30 @@ visualize_model <- function(modobj,smooth_var, int_var = NULL ,group_var = NULL,
     pred$sehi <- pred$fit + 2*pred$se.fit
     pred[,group_var] = NA
     pred[,thisResp] = 1
+    
+<<<<<<< HEAD
+    # df <- df %>%
+    #   gratia::add_partial_residuals(model)
+    # df$partial_resids <- unlist(df[,grep(x=names(df),pattern = "s(",fixed = T)])
+=======
+    df <- df %>%
+      gratia::add_partial_residuals(model)
+    df$partial_resids <- unlist(df[,grep(x=names(df),pattern = "s(",fixed = T)])
+>>>>>>> 77395b92d7044fdf3e17a5d32356e8d6f19f217d
 
-    p1 <- ggplot(data = df, aes_string(x = smooth_var,y = thisResp))
+    p1 <- ggplot(data = df, aes_string(x = smooth_var,y = "partial_resids"))
     if (show.data==TRUE) {
       p1<- p1 +  
-        # geom_point(alpha = .3,stroke = 0, size = point_size,color = line_color)
-        geom_hex(show.legend = TRUE) + scale_fill_gradient(low="white",high=line_color,limits = c(1, 9), oob = scales::squish)
+        geom_point(alpha = .3,stroke = 0, size = point_size,color = line_color)
+        # geom_hex(show.legend = TRUE) + scale_fill_gradient(low="white",high=line_color,limits = c(1, 9), oob = scales::squish)
     } 
     if (!is.null(group_var)) {
       cat("adding lines")
       p1<- p1 + geom_line(aes_string(group = group_var),alpha = .5)
     }
-    p1 <- p1 + geom_ribbon(data = pred,aes_string(x = smooth_var , ymin = "selo",ymax = "sehi"),fill = line_color, alpha = .5, linetype = 0) +
+    p1 <- p1 + geom_ribbon(data = pred,aes_string(x = smooth_var ,y=thisResp, ymin = "selo",ymax = "sehi"),fill = line_color, alpha = .5, linetype = 0) +
       geom_line(data = pred,aes_string(x = smooth_var, y = "fit"),size = line_size,color=line_color) +
-      labs(title = plabels) + ylim(NA,30)
+      labs(title = plabels) #+ ylim(NA,30)
   }
   
   if (derivative_plot == T) {

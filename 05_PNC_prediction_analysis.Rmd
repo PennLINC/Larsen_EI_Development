@@ -1,7 +1,7 @@
 ---
-title: "PNC alpraz model predictions analysis"
+title: "Analysis for E:I ratio"
 author: "Bart"
-date: "2/2/2021"
+date: "4/2/2021"
 output: html_document
 ---
 
@@ -15,7 +15,7 @@ require(ggplot2)
 library(cowplot)
 require(dplyr)
 knitr::opts_chunk$set(fig.height = 6,fig.width = 6,echo = F,warning = FALSE)
-setwd("/cbica/projects/alpraz_EI/SubmissionGithub/")
+# setwd("/cbica/projects/alpraz_EI/SubmissionGithub/")
 source("Alpraz_viz_functions.R")
 font_size <- 16
 unimodal_color = "#1c405eff"
@@ -24,14 +24,8 @@ theme_set(theme_classic(base_family = "sans",base_size = font_size))
 theme_replace(axis.text=element_text(colour = "black",size = font_size))
 
 # Load all the data
-PNCData <- read.csv('/cbica/projects/alpraz_EI/input/PNC_sublist_FD.csv')
-demo<-read.csv('/cbica/projects/alpraz_EI/input/n9498_demographics_go1_20161212.csv')
-idemoQA <- read.csv('/cbica/projects/alpraz_EI/input/n1601_idemo_FinalQA_092817.csv')
-idemoBehavior <- read.csv('/cbica/projects/alpraz_EI/input/n1601_idemoBehavior_20151130.csv')
-health <- read.csv('/cbica/projects/alpraz_EI/input/n1601_health_with_meds_20170421.csv')
-
-alpraz_info = read.csv('/cbica/projects/alpraz_EI/input/alpraz_sublist_FD2.csv')
-alpraz_demo = read.csv('/cbica/projects/alpraz_EI/input/Alpraz_demographics.csv')
+alpraz_info = read.csv('input/alpraz_sublist_FD2.csv')
+alpraz_demo = read.csv('input/Alpraz_demographics.csv')
 alpraz_info <- alpraz_info %>% left_join(alpraz_demo,by=c("subid"="bblid", "sesid"="fmriid"))
 # Sample characteristics
 alpraz_sample <- alpraz_info%>%
@@ -48,14 +42,12 @@ print(alpraz_sample %>%
             males = sum(sex_M0F1==1),
             females = sum(sex_M0F1==0)))
 
+PNCData <- read.table('input/PNC_df.csv')
 # Get exclusions due to poor data quality and health data (low threshhold normal used here)
 FD_thresh <- .3 #threshold for mean FD
 PNCData <- PNCData %>%
-  left_join(demo,by = c("subid"="bblid"))%>%
-  left_join(idemoBehavior,by=c("subid"="bblid"))%>%
-  left_join(idemoQA,by = c("subid"="bblid"))%>%
-  left_join(health, by = c("subid"="bblid"))%>%
   mutate(FD_exclude = FD>FD_thresh)
+
 PNCData$exclusions <-  PNCData$ltnExcludev2==1 | 
   PNCData$FD_exclude==1 |
   is.na(PNCData$idemoBehAllEmoNrCount)|
@@ -107,7 +99,7 @@ plot_results <- function(pred_results,title_text,plot_color="black"){
                  subset = exclusions==0)
   print(summary(gam_model))
   tab_model(gam_model)
-  
+
   DistGAM <- visualize_model(gam_model,smooth_var = "age",int_var = NULL,group_var = NULL,derivative_plot = TRUE,line_color=plot_color)
   ggsave(sprintf('figs/%s_distance_gam.svg',title_text),DistGAM,device = 'svg',height = 5,width = 5)
 }
@@ -117,7 +109,7 @@ plot_results <- function(pred_results,title_text,plot_color="black"){
 Results when using all the schaefer 400 regions.  
 
 ```{r 400, warning=FALSE}
-pred_results <- data_mgmt('/cbica/projects/alpraz_EI/output/PNC_predictions/schaefer400x7_aal_all_FD5.rds')
+pred_results <- data_mgmt('output/PNC_predictions/schaefer400x7_aal_all.rds')
 display_results("schaefer400x7_aal",perm_results = T)
 plot_results(pred_results,"Schaefer400_All_Regions")
 ```
@@ -128,8 +120,8 @@ Looking at the classification models trained on connections to the most transmod
 ### Transmodal
 
 ```{r transmodal}
-pred_results <- data_mgmt('/cbica/projects/alpraz_EI/output/PNC_predictions/schaefer400x7_aal_transmodal25_FD5.rds')
-alpraz_results <- readRDS("/cbica/projects/alpraz_EI/output/drug_classification/schaefer400x7_aal_GSR_transmodal25_svm_1_permute_on_FD5results.rds")
+pred_results <- data_mgmt('output/PNC_predictions/schaefer400x7_aal_transmodal25.rds')
+alpraz_results <- readRDS("output/drug_classification/schaefer400x7_aal_GSR_transmodal25_svm_1_permute_on_results.rds")
 display_results(atlasname = "schaefer400x7_aal",perm_results = TRUE,results = alpraz_results,subdivision = "transmodal25")
 b <- alpraz_results[[1]]
 cat("Results for classification:\n")
@@ -146,8 +138,8 @@ plot_results(pred_a_400,"Schaefer400_Transmodality",plot_color = transmodal_colo
 ### Unimodal
 
 ```{r unimodal}
-pred_results <- data_mgmt('/cbica/projects/alpraz_EI/output/PNC_predictions/schaefer400x7_aal_unimodal25_FD5.rds')
-alpraz_results <- readRDS("/cbica/projects/alpraz_EI/output/drug_classification/schaefer400x7_aal_GSR_unimodal25_svm_1_permute_on_FD5results.rds")
+pred_results <- data_mgmt('output/PNC_predictions/schaefer400x7_aal_unimodal25.rds')
+alpraz_results <- readRDS("output/drug_classification/schaefer400x7_aal_GSR_unimodal25_svm_1_permute_on_results.rds")
 display_results(atlasname = "schaefer400x7_aal",perm_results = T,results = alpraz_results,subdivision="unimodal25")
 b <- alpraz_results[[1]]
 cat("Results for classification:\n")
@@ -202,7 +194,7 @@ ggsave("figs/res_change_plot.svg",res_change_plot,device = "svg", height = 5,wid
 Now we test whether the development of E:I balance is moderated by dimensions of psychopathology. Specifically, we extracting the clinical factor scores from the GOASSESS data and looking for age-by-factor-score interactions.  As psychopathology emerges during adolescence, the hypothesis is that greater symptom load will be impact developmental trajectories of E:I.  
 
 ```{r clinical, eval=TRUE,include=TRUE,fig.height=2,fig.width=3}
-clinical <- read.csv('/cbica/projects/alpraz_EI/input/n1601_goassess_itemwise_bifactor_scores_20161219.csv')
+clinical <- read.csv('input/n1601_goassess_itemwise_bifactor_scores_20161219.csv')
 clinical$subid=clinical$bblid
 
 pred_results <- pred_a_400
@@ -254,7 +246,7 @@ Confirming that the classification results and age effects generalize across oth
 ## Schaefer 200
 
 ```{r s200, eval = FALSE}
-pred_results <- data_mgmt('/cbica/projects/alpraz_EI/output/PNC_predictions/schaefer200x7_aal_all_FD5.rds')
+pred_results <- data_mgmt('output/PNC_predictions/schaefer200x7_aal_all_FD5.rds')
 display_results("schaefer200x7_aal",perm_results = T)
 plot_results(pred_results,"Schaefer200_All_Regions")
 ```
@@ -262,17 +254,16 @@ plot_results(pred_results,"Schaefer200_All_Regions")
 ### AAL
 
 ```{r aal,eval=FALSE}
-pred_results <- data_mgmt('/cbica/projects/alpraz_EI/output/PNC_predictions/aal116_all_FD5.rds')
+pred_results <- data_mgmt('output/PNC_predictions/aal116_all.rds')
 display_results("aal116",perm_results = T)
 plot_results(pred_results,"AAL: All Regions")
 
 ```
 
-
 ### Glasser
 
 ```{r Glasser,eval=FALSE}
-pred_results <- data_mgmt('/cbica/projects/alpraz_EI/output/PNC_predictions/glasser360_aal_all_FD5.rds')
+pred_results <- data_mgmt('output/PNC_predictions/glasser360_aal_all.rds')
 display_results("glasser360_aal",perm_results = T)
 plot_results(pred_results,"Glasser: All Regions")
 
@@ -280,7 +271,7 @@ plot_results(pred_results,"Glasser: All Regions")
 
 ### Gordon
 ```{r Gordon,eval=FALSE}
-pred_results <- data_mgmt('/cbica/projects/alpraz_EI/output/PNC_predictions/gordon333_aal_all_FD5.rds')
+pred_results <- data_mgmt('output/PNC_predictions/gordon333_aal_all.rds')
 display_results("gordon333_aal",perm_results = T)
 plot_results(pred_results,"Gordon: All Regions")
 

@@ -6,7 +6,6 @@ library(e1071)
 library(matrixTests)
 library(doParallel)
 theme_set(theme_classic())
-setwd("/cbica/projects/alpraz_EI/scripts/")
 
 extract_matrix2 <- function(subid,sesid,atlasname,data_type,subdivide=FALSE, subdivision=NULL){
   # This function loads the connectivity matrix for a subj, filters features (if needed; subdivide=T and specify subdivision), and converts to a vector
@@ -355,23 +354,23 @@ featureExtraction <- function(trainingData, feature_proportion = .1){
 ########################
 
 FD_thresh = .5 #matching what was used in Wolf et al.
-subData <- read.csv('/cbica/projects/alpraz_EI/input/alpraz_sublist_FD2.csv')
+subData <- read.csv('input/alpraz_sublist_FD2.csv')
 subInfo <- subData %>% filter(exists==1 & motion_pass==1)
 
-PNCData <- read.csv('/cbica/projects/alpraz_EI/input/PNC_sublist_FD.csv')
-PNCInfo <- PNCData %>% filter(exists==1 & FD < FD_thresh) # Filtered here, but this isn't actually necessary since we convervatively threshold during the developmental analyses at 0.3 mm
+PNCData <- read.csv('input/PNC_sublist_FD.csv')
+PNCInfo <- PNCData %>% filter(exists==1 & FD < FD_thresh) # Filtered here, but this isn't actually necessary since we conservatively threshold during the developmental analyses at 0.3 mm
 
 #####################
 #### SET OPTIONS ####
 #####################
 classifier = "svm"
-data_type ="Alpraz"
+data_type ="GSR"
 
 # Permutation test?
 # Do we want to use a permutation test for significance testing?
 # "permute_on" = yes
 # "permute_off" = no
-perm_test="permute_on"
+perm_test="permute_off"
 num_permutations = 1000
 
 # Do we want to pull out only certain brain areas?
@@ -380,14 +379,14 @@ num_permutations = 1000
 ## "transmodal25" = top 25% most transmodal regions
 ## "unimodal25" = top 25% most unimodal regions
 ## "all" = all regions
-## "regional" = perform classification separately for each region in the atlas.
-subdivide = TRUE
-subdivision = "unimodal25"
+
+subdivide = FALSE
+subdivision = "all"
 cat(sprintf("\nsubdivision = %s\n",subdivision))
 
 # Atlas and FE  
 ## Create a list of atlases that we want to use for classification. We are using only schaefer 400 for primary analyses, but we also replicate with "gordon333_aal","glasser360_aal","aal116", "schaefer200x7_aal". 
-atlas_list = c("schaefer400x7_aal") 
+atlas_list = c("glasser360_aal","schaefer400x7_aal") 
 fe_list=c(1)
 ###############
 
@@ -398,9 +397,9 @@ colnames(atlas_acc)=c("accuracy", "p.value", "fe","perm.p","atlas","num_features
 for (atlasname in atlas_list){
   cat(atlasname)
   ## Load the data
-  if (file.exists(sprintf("/cbica/projects/alpraz_EI/input/CorMats/%s_%s_%s.rds",atlasname,data_type,subdivision))) {
+  if (file.exists(sprintf("input/CorMats/%s_%s_%s.rds",atlasname,data_type,subdivision))) {
     # The data has already been compiled into a data.frame, just load it.
-    df <- readRDS(sprintf("/cbica/projects/alpraz_EI/input/CorMats/%s_%s_%s.rds",atlasname,data_type,subdivision))
+    df <- readRDS(sprintf("input/CorMats/%s_%s_%s.rds",atlasname,data_type,subdivision))
   } else {
     # Compile the data if we haven't already.
     gm<- subInfo %>%
@@ -419,7 +418,7 @@ for (atlasname in atlas_list){
     }
     
     print("saving...")
-    saveRDS(df,file = sprintf("/cbica/projects/alpraz_EI/input/CorMats/%s_%s_%s.rds",atlasname,data_type,subdivision))
+    saveRDS(df,file = sprintf("input/CorMats/%s_%s_%s.rds",atlasname,data_type,subdivision))
     print("saved")
     rm(gm)
   }
@@ -430,12 +429,12 @@ for (atlasname in atlas_list){
   for (n in 1:length(fe_list)) {
     num <- fe_list[n]
     if (file.exists(
-      sprintf("/cbica/projects/alpraz_EI/output/drug_classification/%s_%s_%s_%s_%s_%s_results.rds",
+      sprintf("output/drug_classification/%s_%s_%s_%s_%s_%s_results.rds",
               atlasname,data_type,subdivision,classifier,as.character(fe_list[n]),perm_test
       ))
     ) {
       results <- readRDS(
-        file = sprintf("/cbica/projects/alpraz_EI/output/drug_classification/%s_%s_%s_%s_%s_%s_results.rds",
+        file = sprintf("output/drug_classification/%s_%s_%s_%s_%s_%s_results.rds",
                        atlasname,data_type,subdivision,classifier,as.character(fe_list[n]),perm_test))
     } else{
       if (num == 1) {
@@ -458,11 +457,11 @@ for (atlasname in atlas_list){
       cat('\nFinished SVM\n')
       
       cat(
-        sprintf("/cbica/projects/alpraz_EI/output/drug_classification/%s_%s_%s_%s_%s_%s_results.rds\n",
+        sprintf("output/drug_classification/%s_%s_%s_%s_%s_%s_results.rds\n",
                 atlasname,data_type,subdivision,classifier,as.character(fe_list[n]),perm_test)
         )
       saveRDS(results,
-              file = sprintf("/cbica/projects/alpraz_EI/output/drug_classification/%s_%s_%s_%s_%s_%s_results.rds",
+              file = sprintf("output/drug_classification/%s_%s_%s_%s_%s_%s_results.rds",
                              atlasname,data_type,subdivision,classifier,as.character(fe_list[n]),perm_test))
       cat('saved\n')
     }
@@ -471,8 +470,8 @@ for (atlasname in atlas_list){
   ## Now we use the trained model on the PNC data.
   ## Load the PNC data
   cat("\nLoading PNC data\n")
-  if (file.exists(sprintf("/cbica/projects/alpraz_EI/input/CorMats/PNC/%s_%s.rds",atlasname,subdivision))) {
-    df <- readRDS(sprintf("/cbica/projects/alpraz_EI/input/CorMats/PNC/%s_%s.rds",atlasname,subdivision))
+  if (file.exists(sprintf("input/CorMats/PNC/%s_%s.rds",atlasname,subdivision))) {
+    df <- readRDS(sprintf("input/CorMats/PNC/%s_%s.rds",atlasname,subdivision))
   } else {
     gm<- PNCInfo %>% 
       group_by(subid,sesid) %>%
@@ -488,7 +487,7 @@ for (atlasname in atlas_list){
                   select(subid,sesid)
                 ,mat)
     print("saving...")
-    saveRDS(df,file = sprintf("/cbica/projects/alpraz_EI/input/CorMats/PNC/%s_%s.rds",atlasname,subdivision))
+    saveRDS(df,file = sprintf("input/CorMats/PNC/%s_%s.rds",atlasname,subdivision))
     print("saved")
     rm(gm)
   }
@@ -508,7 +507,7 @@ for (atlasname in atlas_list){
   df$pred <-svm.pred
   #save the output
   cat("saving PNC output....")
-  saveRDS(df%>%select(subid,sesid,pred,distance,decisionValues),file = sprintf("/cbica/projects/alpraz_EI/output/PNC_predictions/%s_%s.rds",atlasname,subdivision))
+  saveRDS(df%>%select(subid,sesid,pred,distance,decisionValues),file = sprintf("output/PNC_predictions/%s_%s.rds",atlasname,subdivision))
   cat("Done!\n")
 }
 
