@@ -1,6 +1,10 @@
 # The development of the E:I ratio: a guide to analysis scripts.   
 The goal of this project is to measure the development of the E:I ratio using fMRI. First, we use a pharmalogical imaging dataset with the GABAergic benzodiazepine alprazolam to empirically generate a multivariate model for the effect of shifts in the E:I ratio on patterns of fMRI connectivity. We then apply this model to a large developmental and assess how model-predicted E:I ratio changes with age. This is a guide to the scripts used to execute the primary  analyses.  
 
+Please see this page for an overview of the steps: https://pennlinc.github.io/Larsen_EI_Development/.  
+
+Brief summary here:  
+
 ## File overview
 01: This downloads the output of all the flywheel processing (including fmriprep and XCP processing). Those scripts can be found in xcp_fw directory.  
 02: This generates connectivity matrices for all the existing parcellations we have. (Atlases were generated with `createCoverageAtlash.sh`).  
@@ -42,8 +46,5 @@ There is functionality to run permutation tests for each of these.
 - It relies on the script `Alpraz_viz_functions.R` to make most of the figures/visualizations. 
   - That script contains all of the functions to visualize classifier results.
 - It also fits the GAM models for the age effects. 
-<<<<<<< HEAD
 
-=======
->>>>>>> 0d74bc9df94880e3419a6f5852771e68e920cdd3
 
