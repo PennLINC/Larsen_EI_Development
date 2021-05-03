@@ -107,7 +107,7 @@ plot_results <- function(pred_results,title_text,plot_color="black"){
                  subset = exclusions==0)
   print(summary(gam_model))
   tab_model(gam_model)
-  
+
   DistGAM <- visualize_model(gam_model,smooth_var = "age",int_var = NULL,group_var = NULL,derivative_plot = TRUE,line_color=plot_color)
   ggsave(sprintf('figs/%s_distance_gam.svg',title_text),DistGAM,device = 'svg',height = 5,width = 5)
 }
@@ -267,7 +267,6 @@ display_results("aal116",perm_results = T)
 plot_results(pred_results,"AAL: All Regions")
 
 ```
-
 
 ### Glasser
 

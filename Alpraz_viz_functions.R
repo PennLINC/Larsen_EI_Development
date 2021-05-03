@@ -366,7 +366,7 @@ display_results <- function(atlasname,GSR="GSR",classifier="svm",perm_results=F,
   AUC <- AUC_obj$auc
   roc_plot <- AUC_obj$roc_plot
   ggsave(file=sprintf('figs/ROC_plot_%s.svg',subdivision),plot=roc_plot,device='svg',height=4,width=4.5,units = "in")
-  cat(sprintf("\nAUC = %1.3f\n",AUC))
+  cat(sprintf("\nAUC = %1.4f\n",AUC))
   
   # Look at W coefs
   W <- results[[2]]
@@ -462,11 +462,10 @@ visualize_model <- function(modobj,smooth_var, int_var = NULL ,group_var = NULL,
     stop("Can't find a gam object to plot")
   }
   s<-summary(model)
-  
+  df <- model$model
   ## Generate custom line plot
   np <- 10000 #number of predicted values
-  df = model$model
-  
+
   theseVars <- attr(model$terms,"term.labels")
   varClasses <- attr(model$terms,"dataClasses")
   thisResp <- as.character(model$terms[[2]])
@@ -609,20 +608,24 @@ visualize_model <- function(modobj,smooth_var, int_var = NULL ,group_var = NULL,
     pred$sehi <- pred$fit + 2*pred$se.fit
     pred[,group_var] = NA
     pred[,thisResp] = 1
+    
+    df <- df %>%
+      gratia::add_partial_residuals(model)
+    df$partial_resids <- unlist(df[,grep(x=names(df),pattern = "s(",fixed = T)])
 
-    p1 <- ggplot(data = df, aes_string(x = smooth_var,y = thisResp))
+    p1 <- ggplot(data = df, aes_string(x = smooth_var,y = "partial_resids"))
     if (show.data==TRUE) {
       p1<- p1 +  
-        # geom_point(alpha = .3,stroke = 0, size = point_size,color = line_color)
-        geom_hex(show.legend = TRUE) + scale_fill_gradient(low="white",high=line_color,limits = c(1, 9), oob = scales::squish)
+        geom_point(alpha = .3,stroke = 0, size = point_size,color = line_color)
+        # geom_hex(show.legend = TRUE) + scale_fill_gradient(low="white",high=line_color,limits = c(1, 9), oob = scales::squish)
     } 
     if (!is.null(group_var)) {
       cat("adding lines")
       p1<- p1 + geom_line(aes_string(group = group_var),alpha = .5)
     }
-    p1 <- p1 + geom_ribbon(data = pred,aes_string(x = smooth_var , ymin = "selo",ymax = "sehi"),fill = line_color, alpha = .5, linetype = 0) +
+    p1 <- p1 + geom_ribbon(data = pred,aes_string(x = smooth_var ,y=thisResp, ymin = "selo",ymax = "sehi"),fill = line_color, alpha = .5, linetype = 0) +
       geom_line(data = pred,aes_string(x = smooth_var, y = "fit"),size = line_size,color=line_color) +
-      labs(title = plabels) + ylim(NA,30)
+      labs(title = plabels) #+ ylim(NA,30)
   }
   
   if (derivative_plot == T) {
