@@ -1,6 +1,10 @@
 # The Development of the E:I Ratio: A Guide to the Analyses and Scripts.   
 The goal of this project is to measure the development of the E:I ratio using fMRI. First, we use a pharmalogical imaging dataset with the GABAergic benzodiazepine alprazolam to empirically generate a multivariate model for the effect of shifts in the E:I ratio on patterns of fMRI connectivity. We then apply this model to a large developmental and assess how model-predicted E:I ratio changes with age. This is a guide to the scripts used to execute the primary  analyses.  
 
+## Requirements
+The analysis scripts should be run on R version 4. It requires a number of R packages which are listed within the scripts. 
+Input data for the multivariate classification are too large for github.  
+
 ## File overview
 01: This downloads the output of all the flywheel processing (including fmriprep and XCP processing). Those scripts can be found in xcp_fw directory.  
 02: This generates connectivity matrices for all the existing parcellations we have. (Atlases were generated with `createCoverageAtlash.sh`).  
