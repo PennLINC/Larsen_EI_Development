@@ -601,15 +601,21 @@ visualize_model <- function(modobj,smooth_var, int_var = NULL ,group_var = NULL,
     pred[,group_var] = NA
     pred[,thisResp] = 1
     
+<<<<<<< HEAD
     # df <- df %>%
     #   gratia::add_partial_residuals(model)
     # df$partial_resids <- unlist(df[,grep(x=names(df),pattern = "s(",fixed = T)])
+=======
+    df <- df %>%
+      gratia::add_partial_residuals(model)
+    df$partial_resids <- unlist(df[,grep(x=names(df),pattern = "s(",fixed = T)])
+>>>>>>> 77395b92d7044fdf3e17a5d32356e8d6f19f217d
 
-    p1 <- ggplot(data = df, aes_string(x = smooth_var,y = thisResp))
+    p1 <- ggplot(data = df, aes_string(x = smooth_var,y = "partial_resids"))
     if (show.data==TRUE) {
       p1<- p1 +  
-        # geom_point(alpha = .3,stroke = 0, size = point_size,color = line_color)
-        geom_hex(show.legend = TRUE) + scale_fill_gradient(low="white",high=line_color,limits = c(1, 9), oob = scales::squish)
+        geom_point(alpha = .3,stroke = 0, size = point_size,color = line_color)
+        # geom_hex(show.legend = TRUE) + scale_fill_gradient(low="white",high=line_color,limits = c(1, 9), oob = scales::squish)
     } 
     if (!is.null(group_var)) {
       cat("adding lines")
