@@ -1,7 +1,7 @@
 ---
-title: "PNC alpraz model predictions analysis"
+title: "Analysis for E:I ratio"
 author: "Bart"
-date: "2/2/2021"
+date: "4/2/2021"
 output: html_document
 ---
 
@@ -15,7 +15,7 @@ require(ggplot2)
 library(cowplot)
 require(dplyr)
 knitr::opts_chunk$set(fig.height = 6,fig.width = 6,echo = F,warning = FALSE)
-setwd("/cbica/projects/alpraz_EI/SubmissionGithub/")
+# setwd("/cbica/projects/alpraz_EI/SubmissionGithub/")
 source("Alpraz_viz_functions.R")
 font_size <- 16
 unimodal_color = "#1c405eff"
@@ -194,7 +194,7 @@ ggsave("figs/res_change_plot.svg",res_change_plot,device = "svg", height = 5,wid
 Now we test whether the development of E:I balance is moderated by dimensions of psychopathology. Specifically, we extracting the clinical factor scores from the GOASSESS data and looking for age-by-factor-score interactions.  As psychopathology emerges during adolescence, the hypothesis is that greater symptom load will be impact developmental trajectories of E:I.  
 
 ```{r clinical, eval=TRUE,include=TRUE,fig.height=2,fig.width=3}
-clinical <- read.csv('/cbica/projects/alpraz_EI/input/n1601_goassess_itemwise_bifactor_scores_20161219.csv')
+clinical <- read.csv('input/n1601_goassess_itemwise_bifactor_scores_20161219.csv')
 clinical$subid=clinical$bblid
 
 pred_results <- pred_a_400
