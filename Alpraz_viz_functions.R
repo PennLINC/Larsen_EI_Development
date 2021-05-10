@@ -77,7 +77,7 @@ feat2mat <- function(W,atlasname,community_summary = F,plots = T,templateCC = NU
       corr_vec[n] <- cor(cortex$SVM_weights,cortex$GABRA)
     }
     print(corr_vec)
-    if (file.exists(sprintf('surrogate_brainmap_corrs_%s_GABRA3_map.txt',atlasname))) {
+    if (file.exists(sprintf('brainsmash_corrs/surrogate_brainmap_corrs_%s_GABRA3_map.txt',atlasname))) {
       x=data.table::rbindlist(lapply(list.files(pattern = glob2rx("surr*brainmap*schaefer400*GAB*.txt")), data.table::fread),idcol="GABRA")
       names(x) <- c("GABRA", "r")
       x<-x %>%
@@ -147,7 +147,7 @@ feat2mat <- function(W,atlasname,community_summary = F,plots = T,templateCC = NU
     print(dotplot)
     ggsave(file='figs/transmodality_svmW_plot.svg',plot=dotplot,device='svg',height=4.5,width=5,units = "in")
     
-    brainsmash_distribution = read.table('surrogate_brainmap_corrs_schaefer400x7_aal_Transmodality_map.txt',col.names = "brainSMASH")%>%
+    brainsmash_distribution = read.table('brainsmash_corrs/surrogate_brainmap_corrs_schaefer400x7_aal_Transmodality_map.txt',col.names = "brainSMASH")%>%
       mutate(R2 = brainSMASH^2, varname = "Transmodality")
     brainsmash_plot <- ggplot(data=brainsmash_distribution,aes(x =varname,y = R2)) + 
       geom_violin(show.legend = TRUE,alpha = .9,fill="grey50") +
@@ -357,7 +357,7 @@ display_results <- function(atlasname,GSR="GSR",classifier="svm",perm_results=F,
   AUC_obj <- ROC_curve(pred_data$mean_dec_vals,pred_data$drug)
   AUC <- AUC_obj$auc
   roc_plot <- AUC_obj$roc_plot
-  ggsave(file=sprintf('figs/ROC_plot_%s.svg',subdivision),plot=roc_plot,device='svg',height=4,width=4.5,units = "in")
+  # ggsave(file=sprintf('figs/ROC_plot_%s.svg',subdivision),plot=roc_plot,device='svg',height=4,width=4.5,units = "in")
   cat(sprintf("\nAUC = %1.4f\n",AUC))
   
   # Look at W coefs
@@ -600,22 +600,16 @@ visualize_model <- function(modobj,smooth_var, int_var = NULL ,group_var = NULL,
     pred$sehi <- pred$fit + 2*pred$se.fit
     pred[,group_var] = NA
     pred[,thisResp] = 1
-    
-<<<<<<< HEAD
+
     # df <- df %>%
     #   gratia::add_partial_residuals(model)
     # df$partial_resids <- unlist(df[,grep(x=names(df),pattern = "s(",fixed = T)])
-=======
-    df <- df %>%
-      gratia::add_partial_residuals(model)
-    df$partial_resids <- unlist(df[,grep(x=names(df),pattern = "s(",fixed = T)])
->>>>>>> 77395b92d7044fdf3e17a5d32356e8d6f19f217d
 
-    p1 <- ggplot(data = df, aes_string(x = smooth_var,y = "partial_resids"))
+    p1 <- ggplot(data = df, aes_string(x = smooth_var,y = thisResp))
     if (show.data==TRUE) {
       p1<- p1 +  
-        geom_point(alpha = .3,stroke = 0, size = point_size,color = line_color)
-        # geom_hex(show.legend = TRUE) + scale_fill_gradient(low="white",high=line_color,limits = c(1, 9), oob = scales::squish)
+        # geom_point(alpha = .3,stroke = 0, size = point_size,color = line_color)
+        geom_hex(show.legend = TRUE) + scale_fill_gradient(low="white",high=line_color,limits = c(1, 9), oob = scales::squish)
     } 
     if (!is.null(group_var)) {
       cat("adding lines")
