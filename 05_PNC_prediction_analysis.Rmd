@@ -5,7 +5,8 @@ date: "10/29/2021"
 output: html_document
 ---
 
-#Primary analyses
+#Primary analyses  
+
 
 ```{r setup, include=FALSE}
 library(tidyverse)
@@ -142,7 +143,7 @@ alpraz_df <- pred_data %>% select(subid,sesid,accurate_classification,drug,mean_
 ```
 
 
-```{r Table S1}
+```{r Table S1,include=TRUE}
 # Conduct a mass univariate analysis to evaluate whether demographic or experimental procedures impact mis-classification.
 ## For continuous variables, use a t-test.
 t.test.results <- alpraz_df %>%
