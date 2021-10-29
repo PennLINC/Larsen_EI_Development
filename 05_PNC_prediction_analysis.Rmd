@@ -18,7 +18,6 @@ require(ggplot2)
 library(cowplot)
 require(dplyr)
 knitr::opts_chunk$set(fig.height = 6,fig.width = 6,echo = F,warning = FALSE)
-# setwd("/cbica/projects/alpraz_EI/SubmissionGithub/")
 source("Alpraz_viz_functions.R")
 font_size <- 16
 unimodal_color = "#1c405eff"
