@@ -1,9 +1,11 @@
 ---
 title: "Analysis for E:I ratio"
 author: "Bart"
-date: "4/2/2021"
+date: "10/29/2021"
 output: html_document
 ---
+
+#Primary analyses
 
 ```{r setup, include=FALSE}
 library(tidyverse)
@@ -42,7 +44,7 @@ print(alpraz_sample %>%
             males = sum(sex_M0F1==1),
             females = sum(sex_M0F1==0)))
 
-PNCData <- read.table('input/PNC_df.csv')
+PNCData <- read.table('input/PNC_df.csv',header = T,sep=",")
 # Get exclusions due to poor data quality and health data (low threshhold normal used here)
 FD_thresh <- .3 #threshold for mean FD
 PNCData <- PNCData %>%
@@ -66,6 +68,7 @@ print(PNCData %>%
 
 
 ```
+
 
 ```{r functions,echo=FALSE}
 # A number of functions that are used.
@@ -100,22 +103,77 @@ plot_results <- function(pred_results,title_text,plot_color="black"){
   print(summary(gam_model))
   tab_model(gam_model)
 
-  DistGAM <- visualize_model(gam_model,smooth_var = "age",int_var = NULL,group_var = NULL,derivative_plot = TRUE,line_color=plot_color)
+  DistGAM <- visualize_model(gam_model,smooth_var = "age",int_var = NULL,group_var = NULL,derivative_plot = FALSE,line_color=plot_color)
   ggsave(sprintf('figs/%s_distance_gam.svg',title_text),DistGAM,device = 'svg',height = 5,width = 5)
 }
 ```
 
 ## Schaefer 400
-Results when using all the schaefer 400 regions.  
+Classifier performance and age effects when using all the schaefer 400 regions.  
 
 ```{r 400, warning=FALSE}
 pred_results <- data_mgmt('output/PNC_predictions/schaefer400x7_aal_all.rds')
-display_results("schaefer400x7_aal",perm_results = T)
+display_results("schaefer400x7_aal",perm_results = T,)
 plot_results(pred_results,"Schaefer400_All_Regions")
 ```
 
-## Transmodality 
-Looking at the classification models trained on connections to the most transmodal or unimodal regions only.  
+Explore the sessions that were mis-classified for Table S1.  
+
+```{r misclassifications_data_org, include=FALSE}
+# Load the classifier results
+results <- readRDS("output/drug_classification/schaefer400x7_aal_GSR_all_svm_1_permute_on_results.rds")
+pred_data <- results[[1]]$pred_data[[1]] 
+
+# Since we fit the model 100 times with different CV folds, we take the mean decision value across all folds and use this to create an aggregate/overall prediction of drug vs placebo.
+dec_folds <- data.table::rbindlist(results[[1]]$pred_data,idcol = "fold")%>%
+  pivot_wider(names_from = "fold","values_from"="decisionValues",id_cols = c("subid","sesid")) #data organization
+pred_data$mean_dec_vals <- rowMeans(dec_folds[,3:dim(dec_folds)[2]]) #calculate the mean across folds
+pred_data <- pred_data %>% 
+  mutate(overall_prediction = case_when(mean_dec_vals>0 ~ 0,mean_dec_vals<0~1),#get the overall prediction from the mean values.
+         accurate_classification = as.numeric(overall_prediction == drug)) # check if it was accurately classified
+
+# Now join with a data table of covariates
+alpraz_covs = read.table('./input/Alpraz_covariates.csv',sep = ",",header = T)
+alpraz_df <- pred_data %>% select(subid,sesid,accurate_classification,drug,mean_dec_vals) %>%
+  left_join(alpraz_covs, by = c("subid"="bblid","sesid"="fmriid")) %>%
+  left_join(alpraz_info %>% select(sesid,subid,FD), by = c("subid","sesid"))%>%
+  mutate(Sex=factor(M0.F1),Condition = factor(drug),Order = factor(day),Age=age.at.fmri1)
+  
+```
+
+
+```{r Table S1}
+# Conduct a mass univariate analysis to evaluate whether demographic or experimental procedures impact mis-classification.
+## For continuous variables, use a t-test.
+t.test.results <- alpraz_df %>%
+  pivot_longer(cols=c(Age, Relaxed,alpraz.ng.mL., STAI.TRAIT, STAI.PREMED, STAI.PRESCAN,STAI.POSTSCAN,Prescan.Postscan, SISTOTAL,FD),
+               values_to="value",
+               names_to="covariate")%>%
+  select(covariate,where(is.numeric))%>%
+  group_by(covariate)%>%
+  do(broom::tidy(t.test(value ~ accurate_classification, data = .)))%>%
+  select(covariate,statistic,p.value)
+
+## For factors, use a chi-square test.
+chsq.results <- alpraz_df %>%
+  select(Sex,Condition,Order) %>%
+  summarise_all(funs(broom::tidy(chisq.test(.,alpraz_df$accurate_classification))))%>%
+  pivot_longer(cols = everything())%>%
+  unnest(cols = value)%>%
+  rename(covariate=name)%>%
+  select(covariate,statistic,p.value)
+
+## Stick them together and print a table.
+covariate.results <- rbind(t.test.results,chsq.results)
+
+knitr::kable(covariate.results, digits = 2,
+                caption = "Effect of covariates on accurate classification",
+                col.names = c("Covariate","Statistic","p-value"))%>%
+  kableExtra::kable_classic_2()
+```
+
+## Transmodality analyses
+Looking at the classifier performance and age effects for models trained on connections to the most transmodal or unimodal regions only.  
 
 ### Transmodal
 
@@ -217,11 +275,7 @@ print(pred_clinical %>%
             males = sum(sex==1),
             females = sum(sex==2)))
 
-# All dimensions
-gam_model <- gam(distance ~ s(age,k=4)+ oSex+FD + idemoBehAllEmoNrCount + s(overall_psychopathology_4factorv2,k=4) + s(psychosis_4factorv2,k=4) + s(mood_4factorv2,k=4) + s(externalizing_4factorv2,k=4) + s(phobias_4factorv2,k=4),data = pred_clinical,subset = exclusions==0)
-summary(gam_model)
-visualize_model(gam_model,smooth_var = "mood_4factorv2",int_var = NULL,group_var = NULL)
-
+# Run the model
 gam_model <- gam(distance ~ ti(age,k=4)+ oSex+FD + idemoBehAllEmoNrCount + 
                ti(overall_psychopathology_4factorv2,k=4) + 
                ti(psychosis_4factorv2,k=4) + 
@@ -236,43 +290,5 @@ gam_model <- gam(distance ~ ti(age,k=4)+ oSex+FD + idemoBehAllEmoNrCount +
              data = pred_clinical,subset = exclusions==0)
 summary(gam_model)
 visualize_model(gam_model,smooth_var = "age",int_var =  "mood_4factorv2",group_var = NULL)
-
-```
-
-
-## Generalizability analyses: Other atlases
-Confirming that the classification results and age effects generalize across other atlas parcellations.  
-
-## Schaefer 200
-
-```{r s200, eval = FALSE}
-pred_results <- data_mgmt('output/PNC_predictions/schaefer200x7_aal_all_FD5.rds')
-display_results("schaefer200x7_aal",perm_results = T)
-plot_results(pred_results,"Schaefer200_All_Regions")
-```
-
-### AAL
-
-```{r aal,eval=FALSE}
-pred_results <- data_mgmt('output/PNC_predictions/aal116_all.rds')
-display_results("aal116",perm_results = T)
-plot_results(pred_results,"AAL: All Regions")
-
-```
-
-### Glasser
-
-```{r Glasser,eval=FALSE}
-pred_results <- data_mgmt('output/PNC_predictions/glasser360_aal_all.rds')
-display_results("glasser360_aal",perm_results = T)
-plot_results(pred_results,"Glasser: All Regions")
-
-```
-
-### Gordon
-```{r Gordon,eval=FALSE}
-pred_results <- data_mgmt('output/PNC_predictions/gordon333_aal_all.rds')
-display_results("gordon333_aal",perm_results = T)
-plot_results(pred_results,"Gordon: All Regions")
 
 ```

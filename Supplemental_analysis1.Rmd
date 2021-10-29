@@ -5,13 +5,15 @@ date: "10/12/2020"
 output: html_document
 ---
 
+Analysis for Figure S1.  
+
+
 ```{r setup}
 library(dplyr)
 library(tidyr)
 library(ggplot2)
 library(sjPlot)
 library(lmerTest)
-setwd('/cbica/projects/alpraz_EI/SubmissionGithub/')
 font_size <- 16
 theme_set(theme_classic(base_family = "sans",base_size = font_size))
 theme_replace(axis.text=element_text(colour = "black",size = font_size))
@@ -38,9 +40,8 @@ mo_analysis <- function(df,save_plots=FALSE){
   print(t)
   
   r<-cor.test(pred_data$FD,pred_data$distance)
-  browser()
-  print(r.estimate)
-  print(r.p.value)
+  print(r$estimate)
+  print(r$p.value)
   
   if (save_plots==TRUE) {
     ggsave(file='figs/FD_session.svg',plot=box_plot,device='svg',height=3,width=3,units = "in")
@@ -51,33 +52,14 @@ mo_analysis <- function(df,save_plots=FALSE){
 ```
 
 ```{r load_data}
-alpraz_info = read.csv('/cbica/projects/alpraz_EI/input/alpraz_sublist_FD2.csv')
-alpraz_demo = read.csv('/cbica/projects/alpraz_EI/input/Alpraz_demographics.csv')
-alpraz_beh = read.csv('/cbica/projects/alpraz_EI/input/Alpraz_behavior.csv')
-alpraz_info <- alpraz_info %>% 
-  left_join(alpraz_demo,by=c("subid"="bblid", "sesid"="fmriid")) %>%
-  left_join(alpraz_beh,by=c("subid"="bblid", "sesid"="fmriid","drug","form","day","series","group"))
+alpraz_info = read.csv('input/alpraz_sublist_FD2.csv')
 ```
 
 
 ```{r analysis}
 
 print("Schaefer 400")
-alpraz_results = readRDS('/cbica/projects/alpraz_EI/output/drug_classification/schaefer400x7_aal_GSR_all_svm_1_permute_on_FD5results.rds')
+alpraz_results = readRDS('output/drug_classification/schaefer400x7_aal_GSR_all_svm_1_permute_on_results.rds')
 mo_analysis(alpraz_results,save_plots=TRUE)
-
-# transmodality
-print("transmodal")
-transmodal <- readRDS("/cbica/projects/alpraz_EI/output/drug_classification/schaefer400x7_aal_GSR_transmodal25_svm_1_permute_on_FD5results.rds")
-mo_analysis(transmodal,save_plots=FALSE)
-
-print("unimodal")
-unimodal <- readRDS("/cbica/projects/alpraz_EI/output/drug_classification/schaefer400x7_aal_GSR_unimodal25_svm_1_permute_on_FD5results.rds")
-mo_analysis(unimodal,save_plots = FALSE)
-
-# 
-# alpraz_long <- pivot_longer(alpraz_info,cols = "FD",names_to = "drug")
-# alpraz_long$drug_session = alpraz_long$drug..7
-# ggplot(alpraz_long%>%filter(motion_pass==1),aes(x = value,fill=drug_session))+geom_density(alpha=.5,position = "dodge")
 
 ```

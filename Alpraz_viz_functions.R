@@ -78,7 +78,7 @@ feat2mat <- function(W,atlasname,community_summary = F,plots = T,templateCC = NU
     }
     print(corr_vec)
     if (file.exists(sprintf('brainsmash_corrs/surrogate_brainmap_corrs_%s_GABRA3_map.txt',atlasname))) {
-      x=data.table::rbindlist(lapply(list.files(pattern = glob2rx("surr*brainmap*schaefer400*GAB*.txt")), data.table::fread),idcol="GABRA")
+      x=data.table::rbindlist(lapply(list.files(path = "brainsmash_corrs/",pattern = glob2rx("surr*brainmap*schaefer400*GAB*.txt"),full.names = TRUE), data.table::fread),idcol="GABRA")
       names(x) <- c("GABRA", "r")
       x<-x %>%
         mutate(GABRA = factor(GABRA,levels = c(1,2,3,4,5,6),labels = c("GABRA1","GABRA2","GABRA3","GABRA4","GABRA5","GABRA6")),
@@ -362,7 +362,7 @@ display_results <- function(atlasname,GSR="GSR",classifier="svm",perm_results=F,
   
   # Look at W coefs
   W <- results[[2]]
-  if (atlasname=="schaefer400x7_aal") {
+  if (atlasname=="schaefer400x7_aal"&subdivision=="all") {
     feat_mat_obj <- feat2mat(W,atlasname,community_summary = T,GABA=T,transmodality = T,surface = T)
     Wmap <- feat_mat_obj$feat_mat
     mat2brain(CC = abs(Wmap),atlasname = atlasname, filename = sprintf("%s_%s_%s_abs_weights",atlasname,GSR,classifier))
@@ -403,7 +403,7 @@ get_derivs_and_plot <- function(modobj,smooth_var,low_color=NULL,hi_color=NULL){
   this_font_size = font_size
   if (is.null(low_color)){low_color = "white"}
   if (is.null(hi_color)){hi_color = "grey20"}
-  derv<-derivatives(modobj,term=smooth_var)
+  derv<-derivatives(modobj,term=smooth_var,partial_match=TRUE)
   derv<- derv %>%
     mutate(sig = !(0 >lower & 0 < upper))
   derv$sig_deriv = derv$derivative*derv$sig
@@ -617,7 +617,7 @@ visualize_model <- function(modobj,smooth_var, int_var = NULL ,group_var = NULL,
     }
     p1 <- p1 + geom_ribbon(data = pred,aes_string(x = smooth_var ,y=thisResp, ymin = "selo",ymax = "sehi"),fill = line_color, alpha = .5, linetype = 0) +
       geom_line(data = pred,aes_string(x = smooth_var, y = "fit"),size = line_size,color=line_color) +
-      labs(title = plabels) #+ ylim(NA,30)
+      labs(title = plabels) #+ ylim(-50,50)
   }
   
   if (derivative_plot == T) {
